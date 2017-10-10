@@ -22,9 +22,9 @@ set path+=**
 call plug#begin('~/.vim/plugged')
 Plug 'fatih/vim-go'
 Plug 'w0ng/vim-hybrid'
-Plug 'ervandew/supertab'
 Plug 'prettier/vim-prettier'
 Plug 'pangloss/vim-javascript'
+Plug 'Shougo/neocomplete'
 call plug#end()
 
 " Prettier
@@ -34,4 +34,6 @@ let g:prettier#config#semi = 'false'
 let g:prettier#config#trailing_comma = 'none'
 let g:prettier#config#parser = 'babylon'
 
+" neocomplete
+let g:neocomplete#enable_at_startup = 1
 colorscheme hybrid
