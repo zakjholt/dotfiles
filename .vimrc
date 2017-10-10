@@ -24,6 +24,7 @@ Plug 'fatih/vim-go'
 Plug 'w0ng/vim-hybrid'
 Plug 'ervandew/supertab'
 Plug 'prettier/vim-prettier'
+Plug 'pangloss/vim-javascript'
 call plug#end()
 
 " Prettier
