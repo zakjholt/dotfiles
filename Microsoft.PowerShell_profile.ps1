@@ -41,6 +41,12 @@ function prompt {
 
 Set HOME=C:\Users\zholt
 
+function gu {
+        git checkout dev
+        git fetch -p
+        git pull origin dev
+        }
+
 function vim {
     $Currentlocation=Get-Location
     $volume = $Currentlocation.tostring() + ":/mnt/workspace"
