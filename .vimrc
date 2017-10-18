@@ -31,6 +31,7 @@ Plug 'Shougo/neosnippet-snippets'
 Plug 'leafgarland/typescript-vim'
 Plug 'ctrlpvim/ctrlp.vim'
 Plug 'luochen1990/rainbow'
+Plug 'PProvost/vim-ps1'
 call plug#end()
 
 " Prettier
