@@ -39,6 +39,11 @@ function prompt {
 }
 
 
-docker pull zakjholt/vim
 Set HOME=C:\Users\zholt
-alias vim='docker run -it --rm -v $(pwd):/mnt/workspace zakjholt/vim'
+
+function vim {
+    $Currentlocation=Get-Location
+    $volume = $Currentlocation.tostring() + ":/mnt/workspace"
+    docker pull zakjholt/vim
+    docker run -it --rm -v "$volume" zakjholt/vim
+}
