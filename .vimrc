@@ -59,4 +59,3 @@ autocmd FileType javascript setlocal omnifunc=javascriptcomplete#CompleteJS
 " Clojure rainbow parens
 let g:rainbow_active = 1
 
-silent! colorscheme hybrid

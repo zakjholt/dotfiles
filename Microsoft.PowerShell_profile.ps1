@@ -1,40 +1,44 @@
 Import-Module -Name posh-git
 
 function Test-Administrator {
-    $user = [Security.Principal.WindowsIdentity]::GetCurrent();
-    (New-Object Security.Principal.WindowsPrincipal $user).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+  $user = [Security.Principal.WindowsIdentity]::GetCurrent();
+  (New-Object Security.Principal.WindowsPrincipal $user).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 }
 
 function prompt {
-    $realLASTEXITCODE = $LASTEXITCODE
+  $realLASTEXITCODE = $LASTEXITCODE
 
-    Write-Host
+  Write-Host
 
-    # Reset color, which can be messed up by Enable-GitColors
-    $Host.UI.RawUI.ForegroundColor = $GitPromptSettings.DefaultForegroundColor
+  # Reset color, which can be messed up by Enable-GitColors
+  $Host.UI.RawUI.ForegroundColor = $GitPromptSettings.DefaultForegroundColor
 
-    if (Test-Administrator) {  # Use different username if elevated
-        Write-Host "(Elevated) " -NoNewline -ForegroundColor White
-    }
+  if (Test-Administrator) {
+    # Use different username if elevated
+    Write-Host "(Elevated) " -NoNewline -ForegroundColor White
+  }
 
-    if ($s -ne $null) {  # color for PSSessions
-        Write-Host " (`$s: " -NoNewline -ForegroundColor DarkGray
-        Write-Host "$($s.Name)" -NoNewline -ForegroundColor Yellow
-        Write-Host ") " -NoNewline -ForegroundColor DarkGray
-    }
+  if ($s -ne $null) {
+    # color for PSSessions
+    Write-Host " (`$s: " -NoNewline -ForegroundColor DarkGray
+    Write-Host "$($s.Name)" -NoNewline -ForegroundColor Yellow
+    Write-Host ") " -NoNewline -ForegroundColor DarkGray
+  }
 
-    Write-Host $($(Get-Location) -replace ($env:USERPROFILE).Replace('\','\\'), "~") -NoNewline -ForegroundColor Blue
+  Write-Host $($(Get-Location) -replace ($env:USERPROFILE).Replace('\', '\\'), "~") -NoNewline -ForegroundColor Blue
 
-    $global:LASTEXITCODE = $realLASTEXITCODE
+  $global:LASTEXITCODE = $realLASTEXITCODE
 
-    Write-VcsStatus
+  Write-VcsStatus
 
-    Write-Host ""
+  Write-Host ""
 
-    Write-Host "$([char]0x2601)  " -NoNewLine -ForegroundColor Green
+  Write-Host "$([char]0x2601)  " -NoNewLine -ForegroundColor Green
 
-    return " "
+  return " "
 }
 
 
+docker pull zakjholt/vim
 Set HOME=C:\Users\zholt
+alias vim='docker run -it --rm -v $(pwd):/mnt/workspace zakjholt/vim'
