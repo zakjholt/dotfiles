@@ -26,7 +26,7 @@ Plug 'prettier/vim-prettier'
 Plug 'pangloss/vim-javascript'
 Plug 'Raimondi/delimitMate'
 Plug 'Shougo/neocomplete.vim'
-Plug 'Shougo/neosnippet' 
+Plug 'Shougo/neosnippet'
 Plug 'Shougo/neosnippet-snippets'
 Plug 'ternjs/tern_for_vim'
 Plug 'leafgarland/typescript-vim'
@@ -53,10 +53,10 @@ let g:neocomplete#sources#syntax#min_keyword_length = 3
 
 " Enable omni completion.
 autocmd FileType css setlocal omnifunc=csscomplete#CompleteCSS
-autocmd FileType html,markdown setlocal omnifunc=htmlcomplete#CompleteTags 
+autocmd FileType html,markdown setlocal omnifunc=htmlcomplete#CompleteTags
 autocmd FileType javascript setlocal omnifunc=javascriptcomplete#CompleteJS
 
 " Clojure rainbow parens
 let g:rainbow_active = 1
 
-colorscheme hybrid
+silent! colorscheme hybrid
