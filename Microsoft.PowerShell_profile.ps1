@@ -23,8 +23,8 @@ function prompt {
 }
 
 Import-Module posh-git
-$global:GitPromptSettings.BeforeText = '['
-$global:GitPromptSettings.AfterText  = '] '
+$global:GitPromptSettings.BeforeText = '<'
+$global:GitPromptSettings.AfterText  = '> '
 
 
 Set HOME=C:\Users\zholt
