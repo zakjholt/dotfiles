@@ -43,7 +43,7 @@ let g:prettier#config#bracket_spacing = 'true'
 " ctrlp
 let g:ctrlp_map = '<c-p>'
 let g:ctrlp_cmd = 'CtrlP'
-let g:ctrlp_custom_ignore = 'node_modules\*|*.swp|*.exe'
+let g:ctrlp_custom_ignore = 'node_modules\|*.swp|*.exe'
 
 " neocomplete
 let g:neocomplete#enable_at_startup = 1
