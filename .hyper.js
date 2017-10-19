@@ -12,7 +12,8 @@ module.exports = {
     fontSize: 12,
 
     // font family with optional fallbacks
-    fontFamily: 'Operator Mono, Menlo, "DejaVu Sans Mono", Consolas, "Lucida Console", monospace',
+    fontFamily:
+      'Operator Mono, Menlo, "DejaVu Sans Mono", Consolas, "Lucida Console", monospace',
 
     // terminal cursor background color and opacity (hex, rgb, hsl, hsv, hwb or cmyk)
     cursorColor: 'rgba(248,28,229,0.8)',
@@ -98,9 +99,13 @@ module.exports = {
 
     // if true, selected text will automatically be copied to the clipboard
     copyOnSelect: false,
-          summon: {
-                hotkey: 'Ctrl+`'
-          }
+
+    hyperTabs: {
+      trafficButtons: true,
+      border: true,
+      tabIconsColored: true,
+      activityColor: 'salmon'
+    }
 
     // if true, on right click selected text will be copied or pasted if no
     // selection is present (true by default on Windows)
@@ -110,7 +115,6 @@ module.exports = {
     // bellSoundURL: 'http://example.com/bell.mp3',
 
     // for advanced config flags please refer to https://hyper.is/#cfg
-          
   },
 
   // a list of plugins to fetch and install from npm
@@ -119,7 +123,7 @@ module.exports = {
   //   `hyperpower`
   //   `@company/project`
   //   `project#1.0.1`
-  plugins: ['hyperterm-hybrid', 'hyperterm-summon'],
+  plugins: ['hyperterm-hybrid', 'hyper-tabs-enhanced'],
 
   // in development, you can create a directory under
   // `~/.hyper_plugins/local/` and include it here
@@ -130,4 +134,4 @@ module.exports = {
     // Example
     // 'window:devtools': 'cmd+alt+o',
   }
-};
+}
