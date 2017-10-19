@@ -6,37 +6,25 @@ function Test-Administrator {
 }
 
 function prompt {
-  $realLASTEXITCODE = $LASTEXITCODE
+    $origLastExitCode = $LASTEXITCODE
+    Write-VcsStatus
 
-  Write-Host
+    $curPath = $ExecutionContext.SessionState.Path.CurrentLocation.Path
+    if ($curPath.ToLower().StartsWith($Home.ToLower()))
+    {
+        $curPath = "~" + $curPath.SubString($Home.Length)
+    }
 
-  # Reset color, which can be messed up by Enable-GitColors
-  $Host.UI.RawUI.ForegroundColor = $GitPromptSettings.DefaultForegroundColor
+    Write-Host $curPath -ForegroundColor Blue
+    $LASTEXITCODE = $origLastExitCode
+    Write-Host "$([char]0x2601)  " -NoNewLine -ForegroundColor Green
 
-  if (Test-Administrator) {
-    # Use different username if elevated
-    Write-Host "(Elevated) " -NoNewline -ForegroundColor White
-  }
-
-  if ($s -ne $null) {
-    # color for PSSessions
-    Write-Host " (`$s: " -NoNewline -ForegroundColor DarkGray
-    Write-Host "$($s.Name)" -NoNewline -ForegroundColor Yellow
-    Write-Host ") " -NoNewline -ForegroundColor DarkGray
-  }
-
-  Write-Host $($(Get-Location) -replace ($env:USERPROFILE).Replace('\', '\\'), "~") -NoNewline -ForegroundColor Blue
-
-  $global:LASTEXITCODE = $realLASTEXITCODE
-
-  Write-VcsStatus
-
-  Write-Host ""
-
-  Write-Host "$([char]0x2601)  " -NoNewLine -ForegroundColor Green
-
-  return " "
+    return " "
 }
+
+Import-Module posh-git
+$global:GitPromptSettings.BeforeText = '['
+$global:GitPromptSettings.AfterText  = '] '
 
 
 Set HOME=C:\Users\zholt
