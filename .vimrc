@@ -19,7 +19,6 @@ set path+=**
 call plug#begin('~/.vim/plugged')
 Plug 'tpope/vim-sensible'
 Plug 'fatih/vim-go'
-Plug 'w0ng/vim-hybrid'
 Plug 'prettier/vim-prettier', { 'do': 'npm install', 'for': ['javascript', 'typescript', 'css', 'less', 'scss', 'json', 'graphql']}
 Plug 'pangloss/vim-javascript'
 Plug 'Raimondi/delimitMate'
@@ -30,14 +29,15 @@ Plug 'leafgarland/typescript-vim'
 Plug 'ctrlpvim/ctrlp.vim'
 Plug 'luochen1990/rainbow'
 Plug 'PProvost/vim-ps1'
+Plug 'tpope/vim-surround'
 call plug#end()
 
 " Prettier
 let g:prettier#autoformat = 0
-autocmd BufWritePre *.js,*.jsx,*.mjs,*.ts,*.tsx,*.css,*.less,*.scss,*.json,*.graphql PrettierAsync
+autocmd BufWritePre,InsertLeave *.js,*.jsx,*.mjs,*.ts,*.tsx,*.css,*.less,*.scss,*.json,*.graphql PrettierAsync
 let g:prettier#config#semi = 'false'
 let g:prettier#config#trailing_comma = 'none'
-let g:prettier#config#parser = 'babylon'
+let g:prettier#config#bracket_spacing = 'true'
 
 " ctrlp
 let g:ctrlp_map = '<c-p>'
