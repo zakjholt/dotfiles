@@ -30,6 +30,7 @@ Plug 'ctrlpvim/ctrlp.vim'
 Plug 'luochen1990/rainbow'
 Plug 'PProvost/vim-ps1'
 Plug 'tpope/vim-surround'
+Plug 'w0rp/ale'
 call plug#end()
 
 " Prettier
@@ -57,3 +58,7 @@ autocmd FileType javascript setlocal omnifunc=javascriptcomplete#CompleteJS
 " Clojure rainbow parens
 let g:rainbow_active = 1
 
+" Ale
+let g:ale_sign_column_always = 1
+let g:ale_sign_error = "⛔"
+let g:ale_sign_warning = "⚠"
