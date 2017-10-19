@@ -1,7 +1,7 @@
 runtime! plugin/sensible.vim
 set term=screen-256color
 set t_ut=
-
+set dir=/tmp//
 set runtimepath^=~/.vim
 filetype plugin on
 set omnifunc=syntaxcomplete#Complete
