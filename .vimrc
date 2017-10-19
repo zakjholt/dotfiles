@@ -20,7 +20,7 @@ call plug#begin('~/.vim/plugged')
 Plug 'tpope/vim-sensible'
 Plug 'fatih/vim-go'
 Plug 'w0ng/vim-hybrid'
-Plug 'prettier/vim-prettier'
+Plug 'prettier/vim-prettier', { 'do': 'npm install', 'for': ['javascript', 'typescript', 'css', 'less', 'scss', 'json', 'graphql']}
 Plug 'pangloss/vim-javascript'
 Plug 'Raimondi/delimitMate'
 Plug 'Shougo/neocomplete.vim'
