@@ -34,8 +34,6 @@ Plug 'luochen1990/rainbow'
 Plug 'PProvost/vim-ps1'
 Plug 'tpope/vim-surround'
 Plug 'scrooloose/nerdtree'
-Plug 'vim-airline/vim-airline'
-Plug 'vim-airline/vim-airline-themes'
 call plug#end()
 
 " Prettier
@@ -71,5 +69,3 @@ autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTree") && b:NERDTree.isT
 " Show hidden files in nerdtree
 let NERDTreeShowHidden=1
 
-" Airline
-let g:airline#extensions#tabline#enabled = 1
