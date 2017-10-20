@@ -35,3 +35,11 @@ function vim {
     docker pull zakjholt/vim
     docker run -it --rm -v "$volume" zakjholt/vim
 }
+
+function gco ($message) {
+    git commit -m $message
+}
+
+function ga {
+    git add .        
+}
