@@ -58,10 +58,6 @@ autocmd FileType javascript setlocal omnifunc=javascriptcomplete#CompleteJS
 " Clojure rainbow parens
 let g:rainbow_active = 1
 
-" Remap pane switching
-map <C-J> <C-W>j<C-W>_
-map <C-K> <C-W>k<C-W>_
-
 " Nerdtree
 " Open on directory or without files
 autocmd StdinReadPre * let s:std_in=1
@@ -72,5 +68,5 @@ autocmd VimEnter * if argc() == 0 && !exists("s:std_in") | NERDTree | endif
 map <C-n> :NERDTreeToggle<CR>
 " Close vim if nerdtree is the only thing left
 autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTree") && b:NERDTree.isTabTree()) | q | endif
-" Show hidden files
+" Show hidden files in nerdtree
 let NERDTreeShowHidden=1
