@@ -106,7 +106,6 @@ module.exports = {
       tabIconsColored: true,
       activityColor: 'salmon'
     }
-
     // if true, on right click selected text will be copied or pasted if no
     // selection is present (true by default on Windows)
     // quickEdit: true
@@ -123,11 +122,11 @@ module.exports = {
   //   `hyperpower`
   //   `@company/project`
   //   `project#1.0.1`
-  plugins: ['hyperterm-hybrid', 'hyper-tabs-enhanced'],
+  plugins: ['hyperterm-cursor', 'hyper-snazzy', 'hyper-tabs-enhanced'],
 
   // in development, you can create a directory under
   // `~/.hyper_plugins/local/` and include it here
-  // to load it and avoid it being `npm install`ed
+  // to loat im and avoid it being `npm install`ed
   localPlugins: [],
 
   keymaps: {
