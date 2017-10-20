@@ -9,6 +9,9 @@ set hlsearch
 set wildchar=<Tab> wildmode=full
 set tabstop=2
 set softtabstop=2
+set shiftwidth=2
+set smartindent
+set autoindent
 set expandtab
 set number
 set showcmd
@@ -31,11 +34,13 @@ Plug 'luochen1990/rainbow'
 Plug 'PProvost/vim-ps1'
 Plug 'tpope/vim-surround'
 Plug 'scrooloose/nerdtree'
+Plug 'vim-airline/vim-airline'
+Plug 'vim-airline/vim-airline-themes'
 call plug#end()
 
 " Prettier
 let g:prettier#autoformat = 0
-autocmd BufWritePre,InsertLeave *.js,*.jsx,*.mjs,*.ts,*.tsx,*.css,*.less,*.scss,*.json,*.graphql PrettierAsync
+autocmd BufWritePre *.js,*.jsx,*.mjs,*.ts,*.tsx,*.css,*.less,*.scss,*.json,*.graphql PrettierAsync
 let g:prettier#config#semi = 'false'
 let g:prettier#config#trailing_comma = 'none'
 let g:prettier#config#bracket_spacing = 'true'
@@ -65,3 +70,6 @@ map <C-n> :NERDTreeToggle<CR>
 autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTree") && b:NERDTree.isTabTree()) | q | endif
 " Show hidden files in nerdtree
 let NERDTreeShowHidden=1
+
+" Airline
+let g:airline#extensions#tabline#enabled = 1
