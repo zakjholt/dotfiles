@@ -63,7 +63,7 @@ let g:rainbow_active = 1
 
 " Nerdtree
 " Open with ctrl + n
-map <C-n> :NERDTreeToggle<CR>
+map <C-n> :NERDTreeFind<CR>
 " Close vim if nerdtree is the only thing left
 autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTree") && b:NERDTree.isTabTree()) | q | endif
 " Show hidden files in nerdtree
