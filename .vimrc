@@ -34,6 +34,7 @@ Plug 'luochen1990/rainbow'
 Plug 'PProvost/vim-ps1'
 Plug 'tpope/vim-surround'
 Plug 'scrooloose/nerdtree'
+Plug 'mxw/vim-jsx'
 call plug#end()
 
 " Prettier
