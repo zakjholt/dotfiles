@@ -63,10 +63,17 @@ autocmd FileType javascript setlocal omnifunc=javascriptcomplete#CompleteJS
 let g:rainbow_active = 1
 
 " Nerdtree
-" Open with ctrl + n
-map <C-n> :NERDTreeFind<CR>
 " Close vim if nerdtree is the only thing left
 autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTree") && b:NERDTree.isTabTree()) | q | endif
 " Show hidden files in nerdtree
 let NERDTreeShowHidden=1
-
+let NERDTreeQuitOnOpen=1
+function MyNerdToggle()
+  if &filetype == 'nerdtree'
+    :NERDTreeToggle
+  else
+    :NERDTreeFind
+  endif
+endfunction
+" Open with ctrl + n
+map <C-n> :call MyNerdToggle()<CR>
