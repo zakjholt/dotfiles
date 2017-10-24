@@ -43,3 +43,5 @@ function gco ($message) {
 function ga {
     git add .        
 }
+
+remove-item alias:curl
