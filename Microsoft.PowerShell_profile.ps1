@@ -29,10 +29,10 @@ $global:GitPromptSettings.AfterText  = '> '
 
 Set HOME=C:\Users\zholt
 
+docker pull zakjholt/vim
 function vim {
     $Currentlocation=Get-Location
     $volume = $Currentlocation.tostring() + ":/mnt/workspace"
-    docker pull zakjholt/vim
     docker run -it --rm -v "$volume" zakjholt/vim
 }
 
