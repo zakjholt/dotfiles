@@ -24,6 +24,7 @@ Plug 'tpope/vim-sensible'
 Plug 'fatih/vim-go'
 Plug 'prettier/vim-prettier', { 'do': 'npm install', 'for': ['javascript', 'typescript', 'css', 'less', 'scss', 'json', 'graphql']}
 Plug 'pangloss/vim-javascript'
+Plug 'mxw/vim-jsx'
 Plug 'Raimondi/delimitMate'
 Plug 'Shougo/neocomplete.vim'
 Plug 'Shougo/neosnippet'
@@ -35,7 +36,6 @@ Plug 'luochen1990/rainbow'
 Plug 'PProvost/vim-ps1'
 Plug 'tpope/vim-surround'
 Plug 'scrooloose/nerdtree'
-Plug 'mxw/vim-jsx'
 call plug#end()
 
 " Prettier
@@ -81,3 +81,7 @@ function MyNerdToggle()
 endfunction
 " Open with ctrl + n
 map <C-n> :call MyNerdToggle()<CR>
+
+
+" JSX highlighting
+let g:jsx_ext_required = 0
