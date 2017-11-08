@@ -44,6 +44,7 @@ autocmd BufWritePre *.js,*.jsx,*.mjs,*.ts,*.tsx,*.css,*.less,*.scss,*.json,*.gra
 let g:prettier#config#semi = 'false'
 let g:prettier#config#trailing_comma = 'none'
 let g:prettier#config#bracket_spacing = 'true'
+let g:prettier#quickfix_enabled = 0
 
 " ctrlp
 let g:ctrlp_map = '<c-p>'
@@ -82,6 +83,6 @@ endfunction
 " Open with ctrl + n
 map <C-n> :call MyNerdToggle()<CR>
 
-
 " JSX highlighting
 let g:jsx_ext_required = 0
+
