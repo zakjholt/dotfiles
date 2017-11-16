@@ -36,6 +36,7 @@ Plug 'luochen1990/rainbow'
 Plug 'PProvost/vim-ps1'
 Plug 'tpope/vim-surround'
 Plug 'scrooloose/nerdtree'
+Plug 'w0ng/vim-hybrid'
 call plug#end()
 
 " Prettier
@@ -86,3 +87,5 @@ map <C-n> :call MyNerdToggle()<CR>
 " JSX highlighting
 let g:jsx_ext_required = 0
 
+set background=dark
+colorscheme hybrid
