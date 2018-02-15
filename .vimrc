@@ -37,6 +37,7 @@ Plug 'PProvost/vim-ps1'
 Plug 'tpope/vim-surround'
 Plug 'scrooloose/nerdtree'
 Plug 'w0ng/vim-hybrid'
+Plug 'lambdatoast/elm.vim'
 call plug#end()
 
 " Prettier
