@@ -29,12 +29,6 @@ $global:GitPromptSettings.AfterText  = '> '
 
 Set HOME=C:\Users\zholt
 
-docker pull zakjholt/vim
-function vim {
-    $Currentlocation=Get-Location
-    $volume = $Currentlocation.tostring() + ":/mnt/workspace"
-    docker run -it --rm -v "$volume" zakjholt/vim
-}
 
 function gco ($message) {
     git commit -m $message
