@@ -142,7 +142,8 @@ set cursorline
 let g:airline#extensions#ale#enabled = 1
 
 let g:ale_linters = {
-      \ 'javascript': ['eslint', 'flow']
+      \ 'javascript': ['eslint', 'flow'],
+      \ 'scss': []
       \}
 
 let g:flow#showquickfix = 0
