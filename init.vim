@@ -16,6 +16,9 @@ call plug#begin('~/.local/share/nvim/plugged')
   Plug 'sheerun/vim-polyglot'
   " Linting engine
   Plug 'dense-analysis/ale'
+  " Typescript tooling
+  Plug 'HerringtonDarkholme/yats.vim'
+  Plug 'mhartington/nvim-typescript', {'do': './install.sh'}
   " Autocomplete popovers
   Plug 'Shougo/deoplete.nvim'
   " Python Autocompletion
@@ -38,7 +41,7 @@ autocmd BufWritePost *.exs,*.ex silent :!mix format %
 autocmd BufWritePost *.js,*.jsx,*.ts,*.tsx silent :!prettier --write %
 
 " c-p file search
-map <C-p> :Files <CR>
+map <C-p> :GFiles <CR>
 
 " find in files
 map <Leader>f :Ag <CR>
