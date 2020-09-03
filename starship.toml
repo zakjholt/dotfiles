@@ -1,0 +1,38 @@
+prompt_order = [
+    "username",
+    "hostname",
+    "directory",
+    "git_branch",
+    "git_commit",
+    "git_state",
+    "git_status",
+    "hg_branch",
+    "nix_shell",
+    "memory_usage",
+    "cmd_duration",
+    "line_break",
+    "jobs",
+    "time",
+    "character",
+]
+
+[character]
+symbol = "☁️"
+error_symbol = "⚠️"
+use_symbol_for_status = true
+
+[git_status]
+conflicted = "🏳"
+ahead = "🏎💨"
+behind = "😰"
+diverged = "😵"
+untracked = "🤔"
+stashed = "📦"
+modified = "📝"
+staged.value = "++"
+staged.style = "green"
+staged_count.enabled = true
+staged_count.style = "green"
+renamed = "👅"
+deleted = "🗑"
+
