@@ -9,7 +9,7 @@ module.exports = {
     updateChannel: 'stable',
 
     // default font size in pixels for all tabs
-    fontSize: 11,
+    fontSize: 14,
 
     // font family with optional fallbacks
     fontFamily: 'Hack, Inconsolata, Consolas, "Lucida Console", monospace',
