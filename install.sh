@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# DOTFILE_DIR=$(dirname "$0")
 DOTFILE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 declare -a HomeDotfiles=(".hyper.js" ".tmux.conf" ".zshrc")
