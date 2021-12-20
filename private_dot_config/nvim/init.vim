@@ -1,32 +1,13 @@
-" Zak's vim conf file
-"
-"
-" General Settings
-"
-"
+runtime ./plug.vim
+runtime ./lspconfig.vim
+runtime ./maps.vim
+runtime ./lualine.vim
+
 set number
 set mouse=a
+set termguicolors
+set incsearch
+set smartcase
+set ignorecase
 
-" Keybindings
-"
-"
-noremap <C-p> :GFiles <CR>
-noremap <leader>f :Rg <CR>
-noremap <C-l> :nohl <CR>
-
-" Plugins
-"
-"
-call plug#begin('~/.vim/plugged')
-
-Plug 'pangloss/vim-javascript'
-Plug 'leafgarland/typescript-vim'
-Plug 'styled-components/vim-styled-components', { 'branch': 'main' }
-Plug 'jparise/vim-graphql'
-
-Plug 'tpope/vim-vinegar'
-Plug 'tpope/vim-surround'
-Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
-Plug 'junegunn/fzf.vim'
-
-call plug#end()
+colorscheme NeoSolarized
