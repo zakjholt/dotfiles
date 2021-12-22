@@ -7,8 +7,10 @@ Plug 'tpope/vim-rhubarb'
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
 Plug 'nvim-treesitter/nvim-treesitter', { 'do': ':TSUpdate' }
-Plug 'overcache/NeoSolarized'
 Plug 'nvim-lualine/lualine.nvim'
-Plug 'neoclide/coc.nvim', {'branch': 'release'}
+Plug 'tpope/vim-obsession'
+Plug 'APZelos/blamer.nvim'
+Plug 'neovim/nvim-lspconfig'
+Plug 'glepnir/lspsaga.nvim'
 
 call plug#end()
