@@ -21,4 +21,8 @@ link "ghostty" "${CONFIG}/ghostty"
 link "tmux.conf" "${HOME}/.tmux.conf"
 link "taskrc" "${HOME}/.taskrc"
 
+mkdir -p "${HOME}/.local/bin"
+link "bin/cursorstatus" "${HOME}/.local/bin/cursorstatus"
+
 printf '\nDone. Restart Ghostty/tmux/nvim if they are already running.\n'
+printf 'Ensure ~/.local/bin is on PATH to run cursorstatus (PR + Cursor session TUI).\n'

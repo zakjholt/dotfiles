@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BIN="$ROOT/tools/cursorstatus/cursorstatus"
+if [[ ! -x "$BIN" ]]; then
+	(cd "$ROOT/tools/cursorstatus" && go build -o cursorstatus .)
+fi
+exec "$BIN" "$@"

@@ -1,0 +1,413 @@
+// Small TUI: open GitHub PRs (gh) + recent Cursor agent transcript sessions.
+package main
+
+import (
+	"bufio"
+	"encoding/json"
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/charmbracelet/bubbles/list"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+)
+
+type prEntry struct {
+	repo    string
+	number  int
+	title   string
+	url     string
+	updated time.Time
+}
+
+func (p prEntry) Title() string {
+	return truncate(fmt.Sprintf("%s #%d  %s", p.repo, p.number, p.title), 78)
+}
+
+func (p prEntry) Description() string {
+	return fmt.Sprintf("%s · %s", p.updated.Local().Format("Jan 2  15:04"), p.url)
+}
+
+func (p prEntry) FilterValue() string { return p.title + p.repo }
+
+type sessEntry struct {
+	workspace string
+	preview   string
+	path      string
+	modTime   time.Time
+}
+
+func (s sessEntry) Title() string {
+	return truncate(s.workspace+" — "+s.preview, 82)
+}
+
+func (s sessEntry) Description() string {
+	return fmt.Sprintf("%s · %s", s.modTime.Local().Format("Jan 2  15:04"), s.path)
+}
+
+func (s sessEntry) FilterValue() string { return s.preview + s.workspace }
+
+type refreshMsg struct {
+	prItems   []list.Item
+	prErr     string
+	sessItems []list.Item
+	sessErr   string
+}
+
+type model struct {
+	tab      int // 0 PRs, 1 sessions
+	prList   list.Model
+	sessList list.Model
+	prErr    string
+	sessErr  string
+	width    int
+	height   int
+}
+
+var (
+	styleTitle  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("4"))
+	styleTab    = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	styleTabSel = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("6"))
+	styleFooter = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	styleErr    = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
+	styleSubtle = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+)
+
+func main() {
+	m := newModel()
+	p := tea.NewProgram(m, tea.WithAltScreen())
+	if _, err := p.Run(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func newModel() model {
+	d := list.NewDefaultDelegate()
+	d.ShowDescription = true
+	d.SetSpacing(1)
+
+	pr := list.New([]list.Item{}, d, 80, 20)
+	pr.SetShowTitle(false)
+	pr.SetShowStatusBar(true)
+	pr.SetFilteringEnabled(false)
+	pr.DisableQuitKeybindings()
+
+	sess := list.New([]list.Item{}, d, 80, 20)
+	sess.SetShowTitle(false)
+	sess.SetShowStatusBar(true)
+	sess.SetFilteringEnabled(false)
+	sess.DisableQuitKeybindings()
+
+	return model{
+		prList:   pr,
+		sessList: sess,
+		width:    80,
+		height:   24,
+	}
+}
+
+func (m model) Init() tea.Cmd {
+	return refreshCmd
+}
+
+func refreshCmd() tea.Msg {
+	prItems, prErr := loadPRs()
+	sessItems, sessErr := loadSessions()
+	return refreshMsg{
+		prItems:   prItems,
+		prErr:     prErr,
+		sessItems: sessItems,
+		sessErr:   sessErr,
+	}
+}
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		h := msg.Height - 6
+		if h < 4 {
+			h = 4
+		}
+		m.prList.SetSize(msg.Width, h)
+		m.sessList.SetSize(msg.Width, h)
+		return m, nil
+
+	case refreshMsg:
+		m.prErr = msg.prErr
+		m.sessErr = msg.sessErr
+		m.prList.SetItems(msg.prItems)
+		m.sessList.SetItems(msg.sessItems)
+		return m, nil
+
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "ctrl+c", "q":
+			return m, tea.Quit
+		case "r":
+			return m, refreshCmd
+		case "tab", "right", "l":
+			m.tab = 1
+			return m, nil
+		case "shift+tab", "left", "h":
+			m.tab = 0
+			return m, nil
+		case "1":
+			m.tab = 0
+			return m, nil
+		case "2":
+			m.tab = 1
+			return m, nil
+		case "o":
+			m.openSelected()
+			return m, nil
+		}
+	}
+
+	var cmd tea.Cmd
+	if m.tab == 0 {
+		m.prList, cmd = m.prList.Update(msg)
+	} else {
+		m.sessList, cmd = m.sessList.Update(msg)
+	}
+	return m, cmd
+}
+
+func (m *model) openSelected() {
+	if m.tab == 0 {
+		i, ok := m.prList.SelectedItem().(prEntry)
+		if !ok || i.url == "" {
+			return
+		}
+		_ = exec.Command("open", i.url).Start()
+		return
+	}
+	i, ok := m.sessList.SelectedItem().(sessEntry)
+	if !ok || i.path == "" {
+		return
+	}
+	_ = exec.Command("open", "-R", i.path).Start()
+}
+
+func (m model) View() string {
+	tab1 := styleTab.Render(" 1 PRs ")
+	if m.tab == 0 {
+		tab1 = styleTabSel.Render(" 1 PRs ")
+	}
+	tab2 := styleTab.Render(" 2 Sessions ")
+	if m.tab == 1 {
+		tab2 = styleTabSel.Render(" 2 Sessions ")
+	}
+	header := lipgloss.JoinHorizontal(lipgloss.Top,
+		styleTitle.Render("PRs & agent sessions"),
+		styleSubtle.Render("   "),
+		tab1,
+		tab2,
+	)
+
+	errLine := ""
+	if m.tab == 0 && m.prErr != "" {
+		errLine = styleErr.Render("GitHub: "+m.prErr) + "\n"
+	} else if m.tab == 1 && m.sessErr != "" {
+		errLine = styleErr.Render("Sessions: "+m.sessErr) + "\n"
+	}
+
+	body := m.prList.View()
+	if m.tab == 1 {
+		body = m.sessList.View()
+	}
+
+	footer := styleFooter.Render(
+		"tab / 1·2 switch   j/k move   enter   o open (PR in browser · session in Finder)   r refresh   q quit",
+	)
+
+	return lipgloss.JoinVertical(lipgloss.Left,
+		header,
+		errLine,
+		body,
+		footer,
+	)
+}
+
+func loadPRs() ([]list.Item, string) {
+	if _, err := exec.LookPath("gh"); err != nil {
+		return nil, "gh not in PATH"
+	}
+	login, err := ghLogin()
+	if err != nil {
+		return nil, err.Error()
+	}
+	cmd := exec.Command(
+		"gh", "search", "prs", "is:open",
+		"--owner", login,
+		"--json", "repository,number,title,url,updatedAt",
+		"--limit", "80",
+	)
+	out, err := cmd.Output()
+	if err != nil {
+		if ee, ok := err.(*exec.ExitError); ok {
+			return nil, strings.TrimSpace(string(ee.Stderr))
+		}
+		return nil, err.Error()
+	}
+	var rows []struct {
+		Number     int    `json:"number"`
+		Title      string `json:"title"`
+		URL        string `json:"url"`
+		UpdatedAt  string `json:"updatedAt"`
+		Repository struct {
+			NameWithOwner string `json:"nameWithOwner"`
+		} `json:"repository"`
+	}
+	if err := json.Unmarshal(out, &rows); err != nil {
+		return nil, err.Error()
+	}
+	sort.Slice(rows, func(i, j int) bool {
+		ti, _ := time.Parse(time.RFC3339, rows[i].UpdatedAt)
+		tj, _ := time.Parse(time.RFC3339, rows[j].UpdatedAt)
+		return ti.After(tj)
+	})
+	items := make([]list.Item, 0, len(rows))
+	for _, r := range rows {
+		t, _ := time.Parse(time.RFC3339, r.UpdatedAt)
+		items = append(items, prEntry{
+			repo:    r.Repository.NameWithOwner,
+			number:  r.Number,
+			title:   r.Title,
+			url:     r.URL,
+			updated: t,
+		})
+	}
+	return items, ""
+}
+
+func ghLogin() (string, error) {
+	out, err := exec.Command("gh", "api", "user", "-q", ".login").Output()
+	if err != nil {
+		return "", fmt.Errorf("gh auth: %w", err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+func loadSessions() ([]list.Item, string) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err.Error()
+	}
+	root := filepath.Join(home, ".cursor", "projects")
+	fi, err := os.Stat(root)
+	if err != nil || !fi.IsDir() {
+		return nil, "~/.cursor/projects not found"
+	}
+	type found struct {
+		path string
+		t    time.Time
+	}
+	var all []found
+	_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(path, ".jsonl") {
+			return nil
+		}
+		if strings.Contains(path, string(filepath.Separator)+"subagents"+string(filepath.Separator)) {
+			return nil
+		}
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return nil
+		}
+		parts := strings.Split(rel, string(filepath.Separator))
+		// workspace / agent-transcripts / UUID / UUID.jsonl
+		if len(parts) != 4 || parts[1] != "agent-transcripts" {
+			return nil
+		}
+		if parts[2] != strings.TrimSuffix(parts[3], ".jsonl") {
+			return nil
+		}
+		all = append(all, found{path: path, t: info.ModTime()})
+		return nil
+	})
+	sort.Slice(all, func(i, j int) bool { return all[i].t.After(all[j].t) })
+	if len(all) > 60 {
+		all = all[:60]
+	}
+	items := make([]list.Item, 0, len(all))
+	for _, f := range all {
+		rel, _ := filepath.Rel(root, f.path)
+		parts := strings.Split(rel, string(filepath.Separator))
+		ws := parts[0]
+		preview := firstUserPreview(f.path)
+		items = append(items, sessEntry{
+			workspace: ws,
+			preview:   preview,
+			path:      f.path,
+			modTime:   f.t,
+		})
+	}
+	return items, ""
+}
+
+func firstUserPreview(jsonlPath string) string {
+	f, err := os.Open(jsonlPath)
+	if err != nil {
+		return "(unreadable)"
+	}
+	defer f.Close()
+	r := bufio.NewReader(f)
+	line, err := r.ReadString('\n')
+	if err != nil && err != io.EOF {
+		return "(empty)"
+	}
+	line = strings.TrimSpace(line)
+	var payload struct {
+		Role    string `json:"role"`
+		Message struct {
+			Content []struct {
+				Type string `json:"type"`
+				Text string `json:"text"`
+			} `json:"content"`
+		} `json:"message"`
+	}
+	if err := json.Unmarshal([]byte(line), &payload); err != nil {
+		return truncate(line, 70)
+	}
+	var b strings.Builder
+	for _, c := range payload.Message.Content {
+		if c.Text != "" {
+			b.WriteString(c.Text)
+		}
+	}
+	text := strings.TrimSpace(b.String())
+	text = stripUserQuery(text)
+	text = strings.ReplaceAll(text, "\n", " ")
+	return truncate(text, 72)
+}
+
+func stripUserQuery(s string) string {
+	const open = "<user_query>"
+	const close = "</user_query>"
+	i := strings.Index(s, open)
+	j := strings.Index(s, close)
+	if i >= 0 && j > i {
+		return strings.TrimSpace(s[i+len(open) : j])
+	}
+	return s
+}
+
+func truncate(s string, max int) string {
+	r := []rune(strings.TrimSpace(s))
+	if len(r) <= max {
+		return string(r)
+	}
+	return string(r[:max-1]) + "…"
+}
