@@ -2,7 +2,7 @@
 package main
 
 import (
-	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -54,20 +54,24 @@ func (s sessEntry) Description() string {
 func (s sessEntry) FilterValue() string { return s.preview + s.workspace }
 
 type refreshMsg struct {
-	prItems   []list.Item
-	prErr     string
-	sessItems []list.Item
-	sessErr   string
+	prItems     []list.Item
+	prErr       string
+	sessItems   []list.Item // all recent sessions
+	sessPRItems []list.Item // sessions whose transcript mentions an open PR URL
+	sessErr     string
 }
 
 type model struct {
-	tab      int // 0 PRs, 1 sessions
-	prList   list.Model
-	sessList list.Model
-	prErr    string
-	sessErr  string
-	width    int
-	height   int
+	tab          int // 0 PRs, 1 sessions
+	prList       list.Model
+	sessList     list.Model
+	prErr        string
+	sessErr      string
+	sessFilterPR bool // sessions tab: only show transcripts that reference a listed open PR
+	sessAllItems []list.Item
+	sessPRItems  []list.Item
+	width        int
+	height       int
 }
 
 var (
@@ -88,7 +92,7 @@ func main() {
 	}
 }
 
-func newModel() model {
+func newModel() *model {
 	d := list.NewDefaultDelegate()
 	d.ShowDescription = true
 	d.SetSpacing(1)
@@ -105,7 +109,7 @@ func newModel() model {
 	sess.SetFilteringEnabled(false)
 	sess.DisableQuitKeybindings()
 
-	return model{
+	return &model{
 		prList:   pr,
 		sessList: sess,
 		width:    80,
@@ -113,22 +117,23 @@ func newModel() model {
 	}
 }
 
-func (m model) Init() tea.Cmd {
+func (m *model) Init() tea.Cmd {
 	return refreshCmd
 }
 
 func refreshCmd() tea.Msg {
 	prItems, prErr := loadPRs()
-	sessItems, sessErr := loadSessions()
+	sessAll, sessPR, sessErr := loadSessions(prItems)
 	return refreshMsg{
-		prItems:   prItems,
-		prErr:     prErr,
-		sessItems: sessItems,
-		sessErr:   sessErr,
+		prItems:     prItems,
+		prErr:       prErr,
+		sessItems:   sessAll,
+		sessPRItems: sessPR,
+		sessErr:     sessErr,
 	}
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -145,7 +150,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.prErr = msg.prErr
 		m.sessErr = msg.sessErr
 		m.prList.SetItems(msg.prItems)
-		m.sessList.SetItems(msg.sessItems)
+		m.sessAllItems = msg.sessItems
+		m.sessPRItems = msg.sessPRItems
+		m.applySessionFilter()
 		return m, nil
 
 	case tea.KeyMsg:
@@ -154,6 +161,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "r":
 			return m, refreshCmd
+		case "p":
+			if m.tab == 1 {
+				m.sessFilterPR = !m.sessFilterPR
+				m.applySessionFilter()
+			}
+			return m, nil
 		case "tab", "right", "l":
 			m.tab = 1
 			return m, nil
@@ -181,6 +194,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+func (m *model) applySessionFilter() {
+	if m.sessFilterPR {
+		m.sessList.SetItems(m.sessPRItems)
+	} else {
+		m.sessList.SetItems(m.sessAllItems)
+	}
+}
+
 func (m *model) openSelected() {
 	if m.tab == 0 {
 		i, ok := m.prList.SelectedItem().(prEntry)
@@ -197,14 +218,18 @@ func (m *model) openSelected() {
 	_ = exec.Command("open", "-R", i.path).Start()
 }
 
-func (m model) View() string {
+func (m *model) View() string {
 	tab1 := styleTab.Render(" 1 PRs ")
 	if m.tab == 0 {
 		tab1 = styleTabSel.Render(" 1 PRs ")
 	}
-	tab2 := styleTab.Render(" 2 Sessions ")
+	sessLabel := " 2 Sessions "
+	if m.sessFilterPR && m.tab == 1 {
+		sessLabel = " 2 Sessions (PR-linked) "
+	}
+	tab2 := styleTab.Render(sessLabel)
 	if m.tab == 1 {
-		tab2 = styleTabSel.Render(" 2 Sessions ")
+		tab2 = styleTabSel.Render(sessLabel)
 	}
 	header := lipgloss.JoinHorizontal(lipgloss.Top,
 		styleTitle.Render("PRs & agent sessions"),
@@ -226,7 +251,7 @@ func (m model) View() string {
 	}
 
 	footer := styleFooter.Render(
-		"tab / 1·2 switch   j/k move   enter   o open (PR in browser · session in Finder)   r refresh   q quit",
+		"tab / 1·2 switch   p PR-linked sessions (on tab 2)   j/k move   o open   r refresh   q quit",
 	)
 
 	return lipgloss.JoinVertical(lipgloss.Left,
@@ -297,21 +322,27 @@ func ghLogin() (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-func loadSessions() ([]list.Item, string) {
+const maxTranscriptBytes = 8 << 20 // 8 MiB per file
+
+// loadSessions scans Cursor agent transcripts. prItems is used to build URL
+// substrings to match; sessions whose file content mentions any open PR URL
+// are included in the PR-linked list (up to 60, by mtime).
+func loadSessions(prItems []list.Item) (all []list.Item, prOnly []list.Item, errStr string) {
+	keys := prMatchKeySet(prItems)
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return nil, err.Error()
+		return nil, nil, err.Error()
 	}
 	root := filepath.Join(home, ".cursor", "projects")
 	fi, err := os.Stat(root)
 	if err != nil || !fi.IsDir() {
-		return nil, "~/.cursor/projects not found"
+		return nil, nil, "~/.cursor/projects not found"
 	}
 	type found struct {
 		path string
 		t    time.Time
 	}
-	var all []found
+	var paths []found
 	_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
 			return nil
@@ -327,48 +358,120 @@ func loadSessions() ([]list.Item, string) {
 			return nil
 		}
 		parts := strings.Split(rel, string(filepath.Separator))
-		// workspace / agent-transcripts / UUID / UUID.jsonl
 		if len(parts) != 4 || parts[1] != "agent-transcripts" {
 			return nil
 		}
 		if parts[2] != strings.TrimSuffix(parts[3], ".jsonl") {
 			return nil
 		}
-		all = append(all, found{path: path, t: info.ModTime()})
+		paths = append(paths, found{path: path, t: info.ModTime()})
 		return nil
 	})
-	sort.Slice(all, func(i, j int) bool { return all[i].t.After(all[j].t) })
-	if len(all) > 60 {
-		all = all[:60]
+	sort.Slice(paths, func(i, j int) bool { return paths[i].t.After(paths[j].t) })
+
+	type scanned struct {
+		entry   sessEntry
+		prMatch bool
 	}
-	items := make([]list.Item, 0, len(all))
-	for _, f := range all {
+	var out []scanned
+	for _, f := range paths {
+		data, err := readFileLimited(f.path, maxTranscriptBytes)
+		if err != nil || len(data) == 0 {
+			continue
+		}
 		rel, _ := filepath.Rel(root, f.path)
 		parts := strings.Split(rel, string(filepath.Separator))
 		ws := parts[0]
-		preview := firstUserPreview(f.path)
-		items = append(items, sessEntry{
+		preview := firstUserPreviewFromBytes(data)
+		e := sessEntry{
 			workspace: ws,
 			preview:   preview,
 			path:      f.path,
 			modTime:   f.t,
+		}
+		out = append(out, scanned{
+			entry:   e,
+			prMatch: dataMentionsPR(data, keys),
 		})
 	}
-	return items, ""
+
+	n := 60
+	if len(out) < n {
+		n = len(out)
+	}
+	all = make([]list.Item, 0, n)
+	for i := 0; i < n; i++ {
+		all = append(all, out[i].entry)
+	}
+
+	var prMatches []sessEntry
+	for _, s := range out {
+		if s.prMatch {
+			prMatches = append(prMatches, s.entry)
+			if len(prMatches) >= 60 {
+				break
+			}
+		}
+	}
+	prOnly = make([]list.Item, len(prMatches))
+	for i := range prMatches {
+		prOnly[i] = prMatches[i]
+	}
+	return all, prOnly, ""
 }
 
-func firstUserPreview(jsonlPath string) string {
-	f, err := os.Open(jsonlPath)
+func prMatchKeySet(prItems []list.Item) map[string]struct{} {
+	keys := make(map[string]struct{})
+	for _, it := range prItems {
+		p, ok := it.(prEntry)
+		if !ok || p.url == "" {
+			continue
+		}
+		u := strings.TrimSpace(p.url)
+		if i := strings.Index(u, "?"); i >= 0 {
+			u = u[:i]
+		}
+		u = strings.TrimSuffix(u, "/")
+		low := strings.ToLower(u)
+		keys[low] = struct{}{}
+		if idx := strings.Index(low, "github.com/"); idx >= 0 {
+			keys[low[idx:]] = struct{}{}
+		}
+	}
+	return keys
+}
+
+func dataMentionsPR(data []byte, keys map[string]struct{}) bool {
+	if len(keys) == 0 {
+		return false
+	}
+	s := strings.ToLower(string(data))
+	for k := range keys {
+		if k == "" {
+			continue
+		}
+		if strings.Contains(s, k) {
+			return true
+		}
+	}
+	return false
+}
+
+func readFileLimited(path string, max int) ([]byte, error) {
+	f, err := os.Open(path)
 	if err != nil {
-		return "(unreadable)"
+		return nil, err
 	}
 	defer f.Close()
-	r := bufio.NewReader(f)
-	line, err := r.ReadString('\n')
-	if err != nil && err != io.EOF {
+	return io.ReadAll(io.LimitReader(f, int64(max)))
+}
+
+func firstUserPreviewFromBytes(data []byte) string {
+	line := firstLine(data)
+	line = strings.TrimSpace(line)
+	if line == "" {
 		return "(empty)"
 	}
-	line = strings.TrimSpace(line)
 	var payload struct {
 		Role    string `json:"role"`
 		Message struct {
@@ -391,6 +494,14 @@ func firstUserPreview(jsonlPath string) string {
 	text = stripUserQuery(text)
 	text = strings.ReplaceAll(text, "\n", " ")
 	return truncate(text, 72)
+}
+
+func firstLine(data []byte) string {
+	idx := bytes.IndexByte(data, '\n')
+	if idx < 0 {
+		return string(data)
+	}
+	return string(data[:idx])
 }
 
 func stripUserQuery(s string) string {
