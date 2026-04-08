@@ -19,5 +19,6 @@ link() {
 link "nvim" "${CONFIG}/nvim"
 link "ghostty" "${CONFIG}/ghostty"
 link "tmux.conf" "${HOME}/.tmux.conf"
+link "taskrc" "${HOME}/.taskrc"
 
 printf '\nDone. Restart Ghostty/tmux/nvim if they are already running.\n'
