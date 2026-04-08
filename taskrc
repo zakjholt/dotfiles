@@ -5,6 +5,15 @@ news.version=3.4.1
 # Used by `task edit` and taskwarrior-tui (e.g. key e on a task)
 editor=vim
 
+# Workflow: whose turn / what you're waiting on (filters: stage:action, stage:review, …)
+uda.stage.label=Stage
+uda.stage.type=string
+uda.stage.values=action,review,feedback
+uda.stage.default=action
+
+# Show stage on the default “next” report
+report.next.columns=id,start.age,entry.age,depends,priority,project,tags,recur,scheduled.countdown,due.relative,until.remaining,description,stage,urgency
+
 # To use the default location of the XDG directories,
 # move this configuration file from ~/.taskrc to ~/.config/task/taskrc and update location config as follows:
 
