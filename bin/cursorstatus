@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Resolve symlinks (e.g. ~/.local/bin/cursorstatus -> ~/dotfiles/bin/cursorstatus)
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+	DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+	LINK="$(readlink "$SOURCE")"
+	[[ "$LINK" != /* ]] && LINK="$DIR/$LINK"
+	SOURCE="$LINK"
+done
+ROOT="$(cd -P "$(dirname "$SOURCE")/.." && pwd)"
 BIN="$ROOT/tools/cursorstatus/cursorstatus"
 if [[ ! -x "$BIN" ]]; then
 	(cd "$ROOT/tools/cursorstatus" && go build -o cursorstatus .)
