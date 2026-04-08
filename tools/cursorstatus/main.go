@@ -262,6 +262,43 @@ func (m *model) View() string {
 	)
 }
 
+// GraphQL search returns private org PRs; `gh search prs --owner <user>` only
+// covers personal repos and misses most org-owned work.
+const gqlSearchPRs = `query($q: String!) {
+  search(query: $q, type: ISSUE, first: 100) {
+    nodes {
+      ... on PullRequest {
+        number
+        title
+        url
+        updatedAt
+        repository { nameWithOwner }
+      }
+    }
+  }
+}`
+
+type gqlPRNode struct {
+	Number     int    `json:"number"`
+	Title      string `json:"title"`
+	URL        string `json:"url"`
+	UpdatedAt  string `json:"updatedAt"`
+	Repository struct {
+		NameWithOwner string `json:"nameWithOwner"`
+	} `json:"repository"`
+}
+
+type gqlSearchResponse struct {
+	Data struct {
+		Search struct {
+			Nodes []*gqlPRNode `json:"nodes"`
+		} `json:"search"`
+	} `json:"data"`
+	Errors []struct {
+		Message string `json:"message"`
+	} `json:"errors"`
+}
+
 func loadPRs() ([]list.Item, string) {
 	if _, err := exec.LookPath("gh"); err != nil {
 		return nil, "gh not in PATH"
@@ -270,30 +307,32 @@ func loadPRs() ([]list.Item, string) {
 	if err != nil {
 		return nil, err.Error()
 	}
-	cmd := exec.Command(
-		"gh", "search", "prs", "is:open",
-		"--owner", login,
-		"--json", "repository,number,title,url,updatedAt",
-		"--limit", "80",
-	)
-	out, err := cmd.Output()
-	if err != nil {
-		if ee, ok := err.(*exec.ExitError); ok {
-			return nil, strings.TrimSpace(string(ee.Stderr))
+	queries := []string{
+		fmt.Sprintf("is:open involves:%s", login),
+		fmt.Sprintf("is:open review-requested:%s", login),
+	}
+	seen := make(map[string]struct{})
+	var rows []gqlPRNode
+	var errMsgs []string
+	for _, q := range queries {
+		nodes, qerr := graphqlSearchPRs(q)
+		if qerr != nil {
+			errMsgs = append(errMsgs, qerr.Error())
+			continue
 		}
-		return nil, err.Error()
+		for _, n := range nodes {
+			if n == nil || n.URL == "" {
+				continue
+			}
+			if _, ok := seen[n.URL]; ok {
+				continue
+			}
+			seen[n.URL] = struct{}{}
+			rows = append(rows, *n)
+		}
 	}
-	var rows []struct {
-		Number     int    `json:"number"`
-		Title      string `json:"title"`
-		URL        string `json:"url"`
-		UpdatedAt  string `json:"updatedAt"`
-		Repository struct {
-			NameWithOwner string `json:"nameWithOwner"`
-		} `json:"repository"`
-	}
-	if err := json.Unmarshal(out, &rows); err != nil {
-		return nil, err.Error()
+	if len(rows) == 0 && len(errMsgs) > 0 {
+		return nil, strings.Join(errMsgs, "; ")
 	}
 	sort.Slice(rows, func(i, j int) bool {
 		ti, _ := time.Parse(time.RFC3339, rows[i].UpdatedAt)
@@ -312,6 +351,34 @@ func loadPRs() ([]list.Item, string) {
 		})
 	}
 	return items, ""
+}
+
+func graphqlSearchPRs(searchQuery string) ([]*gqlPRNode, error) {
+	cmd := exec.Command(
+		"gh", "api", "graphql",
+		"-f", "query="+gqlSearchPRs,
+		"-f", "q="+searchQuery,
+	)
+	out, err := cmd.Output()
+	if err != nil {
+		if ee, ok := err.(*exec.ExitError); ok {
+			return nil, fmt.Errorf("%s", strings.TrimSpace(string(ee.Stderr)))
+		}
+		return nil, err
+	}
+	var resp gqlSearchResponse
+	if err := json.Unmarshal(out, &resp); err != nil {
+		return nil, err
+	}
+	if len(resp.Errors) > 0 {
+		var b strings.Builder
+		for _, e := range resp.Errors {
+			b.WriteString(e.Message)
+			b.WriteString("; ")
+		}
+		return nil, fmt.Errorf("%s", strings.TrimSuffix(b.String(), "; "))
+	}
+	return resp.Data.Search.Nodes, nil
 }
 
 func ghLogin() (string, error) {
@@ -437,6 +504,9 @@ func prMatchKeySet(prItems []list.Item) map[string]struct{} {
 		if idx := strings.Index(low, "github.com/"); idx >= 0 {
 			keys[low[idx:]] = struct{}{}
 		}
+		// Markdown / chat short form: org/repo#123
+		short := strings.ToLower(fmt.Sprintf("%s#%d", p.repo, p.number))
+		keys[short] = struct{}{}
 	}
 	return keys
 }
@@ -445,7 +515,7 @@ func dataMentionsPR(data []byte, keys map[string]struct{}) bool {
 	if len(keys) == 0 {
 		return false
 	}
-	s := strings.ToLower(string(data))
+	s := normalizeForPRMatch(data)
 	for k := range keys {
 		if k == "" {
 			continue
@@ -455,6 +525,15 @@ func dataMentionsPR(data []byte, keys map[string]struct{}) bool {
 		}
 	}
 	return false
+}
+
+// normalizeForPRMatch lowercases and fixes JSON-escaped slashes so URLs in
+// tool payloads (e.g. https:\/\/github.com\/...) still match.
+func normalizeForPRMatch(data []byte) string {
+	s := string(data)
+	s = strings.ReplaceAll(s, `\/`, `/`)
+	s = strings.ReplaceAll(s, `\u002f`, `/`)
+	return strings.ToLower(s)
 }
 
 func readFileLimited(path string, max int) ([]byte, error) {
