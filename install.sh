@@ -9,11 +9,11 @@ DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
 
 link() {
-  local name="$1"
-  local target="$2"
-  mkdir -p "$(dirname "$target")"
-  ln -sfn "${DOTFILES}/${name}" "$target"
-  printf 'linked %s -> %s\n' "$name" "$target"
+	local name="$1"
+	local target="$2"
+	mkdir -p "$(dirname "$target")"
+	ln -sfn "${DOTFILES}/${name}" "$target"
+	printf 'linked %s -> %s\n' "$name" "$target"
 }
 
 link "nvim" "${CONFIG}/nvim"

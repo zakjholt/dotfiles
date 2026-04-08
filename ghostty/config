@@ -1,0 +1,29 @@
+theme = catpuccin-mocha.conf
+
+# ─── Font ────────────────────────────────────────────
+font-family = JetBrains Mono
+font-size = 14
+font-thicken = true
+adjust-cell-height = 35%
+
+# ─── Window ──────────────────────────────────────────
+window-padding-x = 14
+window-padding-y = 10,6
+window-padding-balance = true
+window-padding-color = background
+macos-titlebar-style = tabs
+macos-option-as-alt = true
+window-save-state = always
+
+# ─── Cursor ──────────────────────────────────────────
+cursor-style = block
+cursor-style-blink = true
+shell-integration-features = no-cursor
+
+# ─── Mouse ───────────────────────────────────────────
+copy-on-select = clipboard
+mouse-hide-while-typing = true
+
+# ─── Misc ────────────────────────────────────────────
+confirm-close-surface = false
+clipboard-paste-protection = false

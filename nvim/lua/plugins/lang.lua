@@ -7,4 +7,14 @@ return {
   -- Systems / backend
   { import = "lazyvim.plugins.extras.lang.clangd" },
   { import = "lazyvim.plugins.extras.lang.go" },
+  -- Docs
+  { import = "lazyvim.plugins.extras.lang.markdown" },
+  {
+    "mfussenegger/nvim-lint",
+    opts = {
+      linters_by_ft = {
+        markdown = {},
+      },
+    },
+  },
 }
