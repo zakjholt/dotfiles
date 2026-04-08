@@ -37,7 +37,8 @@ func (p prEntry) Description() string {
 func (p prEntry) FilterValue() string { return p.title + p.repo }
 
 type sessEntry struct {
-	workspace string
+	workspace string // Cursor project slug (e.g. Users-zak-dev-foo)
+	chatID    string // agent --resume target (UUID folder under agent-transcripts)
 	preview   string
 	path      string
 	modTime   time.Time
@@ -52,6 +53,10 @@ func (s sessEntry) Description() string {
 }
 
 func (s sessEntry) FilterValue() string { return s.preview + s.workspace }
+
+type agentDoneMsg struct {
+	err error
+}
 
 type refreshMsg struct {
 	prItems     []list.Item
@@ -155,6 +160,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.applySessionFilter()
 		return m, nil
 
+	case agentDoneMsg:
+		if msg.err != nil {
+			m.sessErr = msg.err.Error()
+		}
+		return m, nil
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
@@ -181,6 +192,11 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "o":
 			m.openSelected()
+			return m, nil
+		case "a":
+			if m.tab == 1 {
+				return m.resumeAgentSession()
+			}
 			return m, nil
 		}
 	}
@@ -218,6 +234,85 @@ func (m *model) openSelected() {
 	_ = exec.Command("open", "-R", i.path).Start()
 }
 
+// resumeAgentSession runs `agent --resume <chatId> --workspace <dir>` in the
+// foreground (releases the TUI) via tea.ExecProcess.
+func (m *model) resumeAgentSession() (tea.Model, tea.Cmd) {
+	i, ok := m.sessList.SelectedItem().(sessEntry)
+	if !ok || i.chatID == "" {
+		return m, nil
+	}
+	agentBin := os.Getenv("CURSORSTATUS_AGENT_BIN")
+	if agentBin == "" {
+		var err error
+		agentBin, err = exec.LookPath("agent")
+		if err != nil {
+			m.sessErr = "agent not in PATH (set CURSORSTATUS_AGENT_BIN)"
+			return m, nil
+		}
+	}
+	ws := resolveWorkspaceDir(i.workspace)
+	args := []string{agentBin, "--resume", i.chatID}
+	if ws != "" {
+		args = append(args, "--workspace", ws)
+	}
+	cmd := exec.Command(args[0], args[1:]...)
+	m.sessErr = ""
+	return m, tea.ExecProcess(cmd, func(err error) tea.Msg {
+		return agentDoneMsg{err: err}
+	})
+}
+
+// resolveWorkspaceDir maps a Cursor project slug to a filesystem path.
+// Slugs like "Users-zak-dev-foo" → "/Users/zak/dev/foo".
+// Override: optional line "slug<TAB>path" in ~/.config/cursorstatus/workspace.map
+func resolveWorkspaceDir(slug string) string {
+	if slug == "" {
+		return ""
+	}
+	if p := workspaceMapLookup(slug); p != "" {
+		return filepath.Clean(p)
+	}
+	if strings.HasPrefix(slug, "Users-") {
+		rest := strings.TrimPrefix(slug, "Users-")
+		parts := strings.Split(rest, "-")
+		if len(parts) == 0 {
+			return ""
+		}
+		return filepath.Join(append([]string{"/", "Users"}, parts...)...)
+	}
+	return ""
+}
+
+func workspaceMapLookup(slug string) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	p := filepath.Join(home, ".config", "cursorstatus", "workspace.map")
+	data, err := os.ReadFile(p)
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		var key, val string
+		if i := strings.IndexByte(line, '\t'); i >= 0 {
+			key, val = strings.TrimSpace(line[:i]), strings.TrimSpace(line[i+1:])
+		} else if i := strings.Index(line, "="); i >= 0 {
+			key, val = strings.TrimSpace(line[:i]), strings.TrimSpace(line[i+1:])
+		} else {
+			continue
+		}
+		if key == slug && val != "" {
+			return val
+		}
+	}
+	return ""
+}
+
 func (m *model) View() string {
 	tab1 := styleTab.Render(" 1 PRs ")
 	if m.tab == 0 {
@@ -251,7 +346,7 @@ func (m *model) View() string {
 	}
 
 	footer := styleFooter.Render(
-		"tab / 1·2 switch   p PR-linked sessions (on tab 2)   j/k move   o open   r refresh   q quit",
+		"tab / 1·2   p PR-filter   a agent resume (tab 2)   o open   r refresh   q quit",
 	)
 
 	return lipgloss.JoinVertical(lipgloss.Left,
@@ -449,9 +544,11 @@ func loadSessions(prItems []list.Item) (all []list.Item, prOnly []list.Item, err
 		rel, _ := filepath.Rel(root, f.path)
 		parts := strings.Split(rel, string(filepath.Separator))
 		ws := parts[0]
+		chatID := parts[2]
 		preview := firstUserPreviewFromBytes(data)
 		e := sessEntry{
 			workspace: ws,
+			chatID:    chatID,
 			preview:   preview,
 			path:      f.path,
 			modTime:   f.t,
